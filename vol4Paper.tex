@@ -34,13 +34,13 @@ Drones have emerged as a defining feature of modern warfare. In this paper, we d
 \subsection{Background}
 Warfare is constantly evolving around the world. From the conflicts in Ukraine and the Middle East, unmanned combat aerial vehicles (UCAV's) have become a defining feature of modern combat. These drones are being used for vital reconnaissance, surveillance, and strike missions, fundamentally changing the dynamics of the battlefield. This makes the need for strategic defensive and counter-drone systems more urgent. As a result, the United States military is investing heavily in drone production in the pursuit of drone dominance.
 
-Autonomous drone on drone tracking presents a complex control problem in which a defensive quadrotor must handle nonlinear flight dynamics and noisy sensor measurements in real time. While a classical feedback controller performs well near a single equilibrium, we want our defensive quadrotor to engage in aggressive tracking over rapidly changing flight conditions where a single linearization is insufficient.
+Autonomous drone on drone tracking presents a complex control problem in which a defensive quadrotor must handle nonlinear flight dynamics and noisy sensor measurements in real time. Classical approaches typically rely on linearized dynamics and optimal feedback design techniques such as Linear Quadratic Regulator (LQR) and Kalman filtering, which together form the Linear Quadratic Gaussian (LQG) framework \cite{astrom_murray}. These methods are widely used in aerospace systems due to their theoretical guarantees in the presence of noise. However, their performance is generally local to a single operating point. We want our defensive quadrotor to engage in aggressive tracking over rapidly changing flight conditions where a single linearization is insufficient.
 
 \subsection{Approach}
 To address this challenge, we apply a gain scheduling LQG framework that turns the nonlinear tracking problem into a series of locally linear subproblems. We pre-compute linearizations of the quadrotor's dynamics at 27 trim operating points, computing an optimal LQR controller and Kalman filter at each point. During simulation, 
 a scheduler selects the nearest operating point to the current state estimate at each timestep, applying the corresponding gains. This allows us to maintain close to optimal performance across a broad range of flight dynamics.
 
-We specifically: (1) derive a physics-based 12-state nonlinear model, (2) linearize and discretize the dynamics at 27 operating points, (3) compute LQR and Kalman filter gains at each point, and (4) validate the system in closed-loop simulation using full nonlinear dynamics under process and measurement noise to assess tracking performance.
+We specifically: (1) derive a physics-based 12-state nonlinear model, (2) linearize and discretize the dynamics at 27 operating points, (3) compute LQR and Kalman filter gains at each point, and (4) validate the system in a closed-loop simulation using full nonlinear dynamics under process and measurement noise to assess tracking performance.
 
 
 % \begin{figure}[htb]
@@ -255,7 +255,15 @@ Future work could extend this approach by incorporating rotor saturation constra
 \newpage
 %% If using bibtex, leave this uncommented
 \bibliography{refs} %if using bibtex, call your bibtex file refs.bib
-\bibliographystyle{alpha}
+
+\begin{thebibliography}{9}
+
+\bibitem{astrom_murray}
+K. J. Åström and R. M. Murray,
+\textit{Feedback Systems: An Introduction for Scientists and Engineers},
+Princeton University Press, 2008.
+
+\end{thebibliography}
 
 %% If not using bibtex, comment out the previous two lines and uncomment those below
 %\begin{thebibliography}{99}
