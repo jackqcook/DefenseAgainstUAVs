@@ -156,9 +156,9 @@ before simulation begins, so that during the simulation the scheduler simply per
 
 \subsection{Kalman Filter Design}
 
-Because the sensors give a noisy picture of the quadrotor, we need a more reliable state estimate than a single raw snapshot. We use the Kalman filter to propogate a forward prediction using the linearized model, then nudge that prediction toward what the sensors report. The quantity we use in the controller is the filtered estimate $\hat{\mathbf{x}}_k$.
+Because the sensors give a noisy picture of the quadrotor, we need a more reliable state estimate than a single raw snapshot. We use the Kalman filter to propagate a forward prediction using the linearized model, then nudge that prediction toward what the sensors report. The quantity we use in the controller is the filtered estimate $\hat{\mathbf{x}}_k$.
 
-In our simulation every state component is measured directly, so
+In our simulation every state component is measured directly so that
 \[
 C = I_{12},
 \qquad
@@ -166,14 +166,14 @@ C = I_{12},
 \qquad
 \mathbf{v}_k \sim \mathcal{N}(\mathbf{0},\,W),
 \]
-where $\mathbf{v}_k$ is measurement noise. The true plant state is also disturbed each step by process noise $\mathbf{w}_k \sim \mathcal{N}(\mathbf{0},\,V)$ (added in the simulation loop after the nonlinear integration step). We use diagonal covariances
+where $\mathbf{v}_k$ is measurement noise. The true plant state is also disturbed at each step by process noise $\mathbf{w}_k \sim \mathcal{N}(\mathbf{0},\,V)$ (added in the simulation loop after the nonlinear integration step). We use diagonal covariances
 \[
 V = 10^{-7}\, I_{12},
 \qquad
 W = 10^{-3}\, I_{12},
 \]
 chosen to match the noise injected into the drone and into $\mathbf{y}_k$. Relative to $W$, the entries of $V$ are small, so the filter treats the model as comparatively trustworthy and does not let one noisy measurement jerk the estimate too hard.
-For each trim we reuse the same discretized matrices $A_d$ and $B_d$ as in the linearization section. The notebook computes the Kalman gain $L$ from the discrete algebraic Riccati equation, then, in deviation form about the scheduled equilibrium $(\mathbf{x}_{\mathrm{eq}},\mathbf{u}_{\mathrm{eq}})$, predicts and corrects:
+For each trim we reuse the same discretized matrices $A_d$ and $B_d$ as in the linearization section. The notebook computes the Kalman gain $L$ from the discrete algebraic Riccati equation. The filter is implemented in deviation form about the scheduled equilibrium $(\mathbf{x}_{\mathrm{eq}},\mathbf{u}_{\mathrm{eq}})$, yielding prediction and correction steps:
 \begin{align*}
 \hat{\mathbf{x}}_{k|k-1}
 &= \mathbf{x}_{\mathrm{eq}}
@@ -188,11 +188,12 @@ The first line is the forward estimate; the second applies the measurement innov
 
 \subsection{LQR Design}
 
-With a state estimate $\hat{\mathbf{x}}_k$ in hand from the Kalman filter, we need a control law that drives the drone toward the target. The Linear Quadratic Regulator finds the gain matrix $K$ that minimizes the infinite-horizon cost
+With a state estimate $\hat{\mathbf{x}}_k$ in hand from the Kalman filter, we need a control law that drives the drone toward the target. While the underlying system evolves in continuous time, control is applied at discrete sampling intervals, motivating the following discrete-time LQR formulation. 
 \[
-J = \sum_{k=0}^{\infty} \left[(\mathbf{x}_k - \mathbf{x}_d)^\top Q\,(\mathbf{x}_k - \mathbf{x}_d) + \mathbf{u}_k^\top R\,\mathbf{u}_k\right],
+J_{LQR} = \sum_{k=0}^{\infty} \left[(\mathbf{x}_k - \mathbf{x}_d)^\top Q\,(\mathbf{x}_k - \mathbf{x}_d) + \mathbf{u}_k^\top R\,\mathbf{u}_k\right],
 \]
-where $\mathbf{x}_d$ is the desired state and $Q$, $R$ are tuning weights. $Q$ penalizes deviation from the goal---maintaining the tracker exactly 1 meter directly behind the target---and $R$ penalizes control effort. We solve for $K$ at each of the 27 operating points offline via the discrete algebraic Riccati equation, storing the result in the schedule bank alongside $L$.
+
+This Linear Quadratic Regulator finds the gain matrix $K$ that minimizes our infinite-horizon cost J. Under this formulation, $\mathbf{x}_d$ represents the desired state, while $\mathbf{x}_k$ represents our current state at timestep k. $Q$ and $R$ are used as tuning weights where $Q$ penalizes deviation from the goal by maintaining the tracker exactly 1 meter directly behind the target, while $R$ penalizes control effort by discouraging overly aggressive inputs. We solve for $K$ at each of the 27 operating points offline via the discrete algebraic Riccati equation, storing the result in the schedule bank alongside $L$.
 
 \subsection{Gain Scheduling}
 
@@ -204,14 +205,14 @@ Position is excluded from this comparison because it drifts continuously and doe
 \[
 \mathbf{u}_k = \mathbf{u}_{\mathrm{eq}} - K\bigl(\hat{\mathbf{x}}_k - \mathbf{x}_d\bigr),
 \]
-where $\mathbf{x}_d$ encodes the 1-meter-behind tracking objective. Because the scheduler continuously re-selects the nearest local model, the controller sees a linearization that is always a good approximation to the true nonlinear dynamics---enabling near-optimal performance across the full flight envelope without any online optimization.
+where $\mathbf{x}_d$ encodes the 1-meter-behind tracking objective. Because the scheduler continuously re-selects the nearest local model, the controller always operates around a locally valid model of the nonlinear dynamics, enabling stable performance across the full flight envelope
 
 
 
 %% Third Section
 \section{\textbf{Results and Analysis}}
 
-We ested the our modified LQG controller in a 20-second simulation against the full nonlinear plant under process noise ($V = 10^{-7}I_{12}$) and measurement noise ($W = 10^{-3}I_{12}$). The target followed a complex 3D trajectory constructed from randomly sequenced waypoints, requiring the tracker to engage multiple updates over the course of the run.
+We tested our modified LQG controller in a 20-second simulation against the full nonlinear plant under process noise ($V = 10^{-7}I_{12}$) and measurement noise ($W = 10^{-3}I_{12}$). The target followed a complex 3D trajectory constructed from randomly sequenced waypoints, requiring the tracker to engage multiple updates over the course of the run.
 
 Figure~\ref{fig:3d} shows the 3D trajectories of the tracker (solid blue) and target (dashed orange) over the full simulation. After the initialization of the tracker and target drone paths, the tracker rapidly converges onto the target's path and remains in our desired distance for the remainder of the simulation. The blue curve closely follows the orange curve for the full simulation, indicating that the gain-scheduled controller successfully transitions between operating-point regimes without noticeable loss of tracking performance.
 
